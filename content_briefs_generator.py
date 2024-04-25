@@ -6,6 +6,14 @@ import time
 # Title and Setup
 st.title('Bulk SERP-driven SEO Content Brief Generator')
 
+# Subtitle
+st.markdown(
+    """
+    by [Florian Potier](https://twitter.com/FloPots) - [Intrepid Digital](https://www.intrepidonline.com/)
+    """,
+    unsafe_allow_html=True
+)
+
 # Input for the OpenAI API key
 api_key = st.text_input("Enter your OpenAI API key", type="password")
 
