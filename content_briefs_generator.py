@@ -18,7 +18,7 @@ st.markdown(
 api_key = st.text_input("Enter your OpenAI API key", type="password")
 
 # File upload
-uploaded_file = st.file_uploader("Choose your CSV file", type=['csv'])
+uploaded_file = st.file_uploader("Choose your CSV file, it should contain the columns Keyword and URL (See [Template](https://docs.google.com/spreadsheets/d/1ApdoOKjC6ZAg1JkWiY51fOToXqH_cTP8PSj2wVlS8Iw/edit?usp=sharing))", type=['csv'])
 
 if uploaded_file and api_key:
     # Initialize the OpenAI client with the user-provided API key
