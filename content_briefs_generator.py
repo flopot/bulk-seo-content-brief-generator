@@ -29,6 +29,10 @@ if uploaded_file and api_key:
     
     all_responses = []
 
+    # Initialize the progress bar
+    progress_bar = st.progress(0)
+    total_keywords = len(keywords_df)
+
     # Function to generate SEO recommendations using the OpenAI client
     def generate_seo_recommendations(keyword, url):
         response = client.chat.completions.create(
@@ -66,12 +70,15 @@ if uploaded_file and api_key:
         )
         # Correctly access the message content from the response
         return response.choices[0].message.content.strip()
-
+        
     # Iterate over each row in the DataFrame
     for index, row in keywords_df.iterrows():
         seo_advice = generate_seo_recommendations(row['Keyword'], row['URL'])
         all_responses.append([row['Keyword'], seo_advice])
         time.sleep(1)  # To avoid hitting API rate limits
+
+        # Update the progress bar
+        progress_bar.progress((index + 1) / total_keywords)
 
     # Convert the responses into a DataFrame
     results_df = pd.DataFrame(all_responses, columns=['Keyword', 'Recommendations'])
