@@ -65,12 +65,11 @@ if uploaded_file and api_key:
     
     Other comments: Based on the top 10 SERP results, most sites emphasize the nature of their home warranty coverage, the specific systems and appliances that are covered, and their standout features or benefits. However, they neglect to elaborate on the importance of home warranty coverage, and customer testimonials appear lacking as well. This is where your page can stand out from the competition. Also, integrating secondary keywords organically into the content can help improve the page's search engine rankings. Ensure to maintain a user-friendly design and navigation on the page. Include clear call-to-actions (CTAs) to lead visitors towards plan purchase or contacting your team for enquiries. Create high-quality, engaging content to retain visitors and increase dwell time. Remember that content should be written with user intent in mind, rather than just catering to search engine algorithms."""}
             ],
-
             model="gpt-4o"
         )
         # Correctly access the message content from the response
         return response.choices[0].message.content.strip()
-        
+
     # Iterate over each row in the DataFrame
     for index, row in keywords_df.iterrows():
         seo_advice = generate_seo_recommendations(row['Keyword'], row['URL'])
