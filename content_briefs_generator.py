@@ -25,14 +25,6 @@ st.markdown(
         font-weight: 500;
         border-radius: 0px 0px 0px 0px;
         }
-
-        button:hover{
-        border-color: black !important
-        }
-
-        button p:active {
-        color: black !important;
-        }
         
     </style>
     """,
