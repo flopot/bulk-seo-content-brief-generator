@@ -24,11 +24,21 @@ st.markdown(
         font-size: 16px;
         font-weight: 500;
         border-radius: 0px 0px 0px 0px;
-        }    
+        }
+
+        button:hover{
+        border-color: black !important
+        }
+
+        button p:active {
+        color: black !important;
+        }
+        
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # Title and Setup
 st.title('Bulk SERP-driven SEO Content Brief Generator')
