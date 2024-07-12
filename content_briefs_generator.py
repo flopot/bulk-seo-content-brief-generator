@@ -31,7 +31,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 # Title and Setup
 st.title('Bulk SERP-driven SEO Content Brief Generator')
 
