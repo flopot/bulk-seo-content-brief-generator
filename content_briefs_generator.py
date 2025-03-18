@@ -5,7 +5,7 @@ import time
 import concurrent.futures
 
 # Title and Setup
-st.title('Bulk SERP-driven SEO Content Brief Generator')
+st.title('Bulk SERP-driven SEO Content Brief Generator 2.0')
 
 # Subtitle
 st.markdown(
