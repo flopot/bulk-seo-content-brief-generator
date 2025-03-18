@@ -1,3 +1,5 @@
 streamlit
 pandas
 openai
+requests
+tiktoken
