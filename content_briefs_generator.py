@@ -3,34 +3,6 @@ import pandas as pd
 from openai import OpenAI
 import time
 
-# Custom CSS for styling and external stylesheet
-st.markdown(
-    """
-    <style>
-        p,.appview-container,h1,.stHeadingWithActionElements,.stWidgetLabel,.stMarkdown,.st-ae,.st-bd,.st-be,.st-bf,.st-bg,.st-bh,.st-bi,.st-bj,.st-bk,.st-bl,.st-bm,.st-ah,.st-bn,.st-bo,.st-bp,.st-bq,.st-br,.st-bs,.st-bt,.st-bu,.st-ax,.st-ay,.st-az,.st-bv,.st-b1,.st-b2,.st-bc,.st-bw,.st-bx,.st-by{
-        color: black !important;
-        font-family: "Raleway", Sans-serif;
-        }
-
-        .appview-container,h1,.stHeadingWithActionElements,.stWidgetLabel,.stMarkdown,.st-ae,.st-bd,.st-be,.st-bf,.st-bg,.st-bh,.st-bi,.st-bj,.st-bk,.st-bl,.st-bm,.st-ah,.st-bn,.st-bo,.st-bp,.st-bq,.st-br,.st-bs,.st-bt,.st-bu,.st-ax,.st-ay,.st-az,.st-bv,.st-b1,.st-b2,.st-bc,.st-bw,.st-bx,.st-by{
-        background-color: white !important;
-        }
-        
-        button{
-        background-color: #1098A7 !important;
-        border: none;
-        outline: none;
-        font-family: "Raleway", Sans-serif;
-        font-size: 16px;
-        font-weight: 500;
-        border-radius: 0px 0px 0px 0px;
-        }
-        
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # Title and Setup
 st.title('Bulk SERP-driven SEO Content Brief Generator')
 
