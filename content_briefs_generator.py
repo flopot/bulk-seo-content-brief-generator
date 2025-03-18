@@ -37,22 +37,21 @@ if uploaded_file and api_key:
 
     # Function to generate SEO recommendations using the OpenAI client
     def generate_seo_recommendations(batch):
-        messages = [{"role": "system", "content": 
-            "You will receive a URL and the keyword it targets. Use these to generate the best possible content brief. Don't say anything more than the content brief."}
-        ]
+    responses = []
+    
+    for keyword, url in batch:
+        messages = [
+            {"role": "system", "content": "You will receive a URL and the keyword it targets. Use these to generate the best possible content brief. Don't say anything more than the content brief."},
+            {"role": "user", "content": f"""Here's the URL: '{url}' and the Keyword: '{keyword}'. Generate a comprehensive content brief respecting the following structure: 
+            
+    URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc...), Other comments.
 
-        for keyword, url in batch:
-            messages.append({"role": "user", "content":f"""Here's the URL: '{url}' and the Keyword: '{keyword}'. Generate a comprehensive content brief respecting the following structure: URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc... using bullet points), Other comments (here you can add other relevant comments, don't use bullet points or any kind of listing). Here's an example of how it should look like in terms of format:
+    Example format:
     URL: https://www.ahs.com/our-coverage/
-    
     Primary Keyword: Home Warranty Coverage
-    
     Secondary Keywords: AHS Home warranty, Home protection plan, Home system coverage, Home appliances warranty, Comprehensive home coverage, Best home warranty coverage, Home warranty plans, Home warranty services.
-    
     Title: AHS Home Warranty Coverage: The Comprehensive Home Protection Plan
-    
     Meta Description: Secure your property with AHS Home Warranty Coverage. Explore our comprehensive protection plans for your home systems and appliances. Experience peace of mind like never before. 
-    
     Headings Structure: 
     - H1: AHS Home Warranty Coverage: Unparalleled Protection for Your Home
     - H2: What is Home Warranty Coverage?
@@ -67,16 +66,19 @@ if uploaded_file and api_key:
     - H3: Professional Services
     - H2: Customer Testimonials
     
-    Other comments: Based on the top 10 SERP results, most sites emphasize the nature of their home warranty coverage, the specific systems and appliances that are covered, and their standout features or benefits. However, they neglect to elaborate on the importance of home warranty coverage, and customer testimonials appear lacking as well. This is where your page can stand out from the competition. Also, integrating secondary keywords organically into the content can help improve the page's search engine rankings. Ensure to maintain a user-friendly design and navigation on the page. Include clear call-to-actions (CTAs) to lead visitors towards plan purchase or contacting your team for enquiries. Create high-quality, engaging content to retain visitors and increase dwell time. Remember that content should be written with user intent in mind, rather than just catering to search engine algorithms."""})
+    Other comments: Based on the top 10 SERP results, most sites emphasize the nature of their home warranty coverage, the specific systems and appliances that are covered, and their standout features or benefits. However, they neglect to elaborate on the importance of home warranty coverage, and customer testimonials appear lacking as well. This is where your page can stand out from the competition. Also, integrating secondary keywords organically into the content can help improve the page's search engine rankings. Ensure to maintain a user-friendly design and navigation on the page. Include clear call-to-actions (CTAs) to lead visitors towards plan purchase or contacting your team for enquiries. Create high-quality, engaging content to retain visitors and increase dwell time. Remember that content should be written with user intent in mind, rather than just catering to search engine algorithms."""}
+        ]
 
         try:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages
             )
-            return [choice.message.content.strip() for choice in response.choices]
+            responses.append(response.choices[0].message.content.strip())
         except Exception as e:
-            return [f"Error: {e}" for _ in batch]
+            responses.append(f"Error: {e}")
+            
+    return responses
 
     # **Batching for faster execution**
     batch_size = 5  # Adjust based on token limits
