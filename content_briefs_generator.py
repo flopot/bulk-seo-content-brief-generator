@@ -1,72 +1,47 @@
 import streamlit as st
 import pandas as pd
-from openai import OpenAI
-import time
+import asyncio
+import logging
+import os
+import tiktoken
+from openai import AsyncOpenAI
 
-# Custom CSS for styling and external stylesheet
-st.markdown(
-    """
-    <style>
-        p,.appview-container,h1,.stHeadingWithActionElements,.stWidgetLabel,.stMarkdown,.st-ae,.st-bd,.st-be,.st-bf,.st-bg,.st-bh,.st-bi,.st-bj,.st-bk,.st-bl,.st-bm,.st-ah,.st-bn,.st-bo,.st-bp,.st-bq,.st-br,.st-bs,.st-bt,.st-bu,.st-ax,.st-ay,.st-az,.st-bv,.st-b1,.st-b2,.st-bc,.st-bw,.st-bx,.st-by{
-        color: black !important;
-        font-family: "Raleway", Sans-serif;
-        }
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
-        .appview-container,h1,.stHeadingWithActionElements,.stWidgetLabel,.stMarkdown,.st-ae,.st-bd,.st-be,.st-bf,.st-bg,.st-bh,.st-bi,.st-bj,.st-bk,.st-bl,.st-bm,.st-ah,.st-bn,.st-bo,.st-bp,.st-bq,.st-br,.st-bs,.st-bt,.st-bu,.st-ax,.st-ay,.st-az,.st-bv,.st-b1,.st-b2,.st-bc,.st-bw,.st-bx,.st-by{
-        background-color: white !important;
-        }
-        
-        button{
-        background-color: #1098A7 !important;
-        border: none;
-        outline: none;
-        font-family: "Raleway", Sans-serif;
-        font-size: 16px;
-        font-weight: 500;
-        border-radius: 0px 0px 0px 0px;
-        }
-        
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# Constants
+TOKEN_LIMIT = 128000  # GPT-4o-mini context window
+SAFETY_MARGIN = 1000  # Leave room for responses
+MAX_CONCURRENT_REQUESTS = 5  # Adjust based on rate limits
 
-# Title and Setup
+# Streamlit UI
 st.title('Bulk SERP-driven SEO Content Brief Generator')
+st.markdown("""by [Florian Potier](https://twitter.com/FloPots) - [Intrepid Digital](https://www.intrepidonline.com/)""", unsafe_allow_html=True)
 
-# Subtitle
-st.markdown(
-    """
-    by [Florian Potier](https://twitter.com/FloPots) - [Intrepid Digital](https://www.intrepidonline.com/)
-    """,
-    unsafe_allow_html=True
-)
-
-# Input for the OpenAI API key
 api_key = st.text_input("Enter your OpenAI API key", type="password")
-
-# File upload
-uploaded_file = st.file_uploader("Choose your CSV file, it should contain the columns Keyword and URL (See [Template](https://docs.google.com/spreadsheets/d/1ApdoOKjC6ZAg1JkWiY51fOToXqH_cTP8PSj2wVlS8Iw/edit?usp=sharing))", type=['csv'])
+uploaded_file = st.file_uploader("Choose your CSV file (must contain 'Keyword' and 'URL')", type=['csv'])
 
 if uploaded_file and api_key:
-    # Initialize the OpenAI client with the user-provided API key
-    client = OpenAI(api_key=api_key)  # Use the input API key here
+    df = pd.read_csv(uploaded_file)
+    required_columns = {"Keyword", "URL"}
+    if not required_columns.issubset(df.columns):
+        st.error("CSV file must contain 'Keyword' and 'URL' columns.")
+        st.stop()
 
-    # Read the uploaded file into a DataFrame
-    keywords_df = pd.read_csv(uploaded_file)
+    # OpenAI Async client
+    client = AsyncOpenAI(api_key=api_key)
+    encoding = tiktoken.encoding_for_model("gpt-4o-mini")
+
+    def count_tokens(text: str) -> int:
+        return len(encoding.encode(text))
+
+    # Prompt template
+    SYSTEM_PROMPT = """
+    You'll be given a URL and the keyword it targets. Analyze the page and the top SERP results to generate an optimized content brief.
+    """
+    USER_PROMPT_TEMPLATE = """
+    First, visit {URL}. Then check the top 10 results that appear in the SERP for the keyword '{Keyword}'. Finally, generate a comprehensive content brief respecting the following structure: URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc... using bullet points), Other comments (here you can add other relevant comments, don't use bullet points or any kind of listing). Here's an example of how it should look like in terms of format:
     
-    all_responses = []
-
-    # Initialize the progress bar
-    progress_bar = st.progress(0)
-    total_keywords = len(keywords_df)
-
-    # Function to generate SEO recommendations using the OpenAI client
-    def generate_seo_recommendations(keyword, url):
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "Send your URL and the keyword you target with it. I will have a look at your page and at the top 10 results to generate the best possible content brief."},
-                {"role": "user", "content": f"""First, visit '{url}'. Then check the top 10 results that appear in the SERP for the keyword '{keyword}'. Finally, generate a comprehensive content brief respecting the following structure: URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc... using bullet points), Other comments (here you can add other relevant comments, don't use bullet points or any kind of listing). Here's an example of how it should look like in terms of format:
     URL: https://www.ahs.com/our-coverage/
     
     Primary Keyword: Home Warranty Coverage
@@ -92,24 +67,69 @@ if uploaded_file and api_key:
     - H2: Customer Testimonials
     
     Other comments: Based on the top 10 SERP results, most sites emphasize the nature of their home warranty coverage, the specific systems and appliances that are covered, and their standout features or benefits. However, they neglect to elaborate on the importance of home warranty coverage, and customer testimonials appear lacking as well. This is where your page can stand out from the competition. Also, integrating secondary keywords organically into the content can help improve the page's search engine rankings. Ensure to maintain a user-friendly design and navigation on the page. Include clear call-to-actions (CTAs) to lead visitors towards plan purchase or contacting your team for enquiries. Create high-quality, engaging content to retain visitors and increase dwell time. Remember that content should be written with user intent in mind, rather than just catering to search engine algorithms."""}
-            ],
-            model="gpt-4o"
-        )
-        # Correctly access the message content from the response
-        return response.choices[0].message.content.strip()
 
-    # Iterate over each row in the DataFrame
-    for index, row in keywords_df.iterrows():
-        seo_advice = generate_seo_recommendations(row['Keyword'], row['URL'])
-        all_responses.append([row['Keyword'], seo_advice])
-        time.sleep(1)  # To avoid hitting API rate limits
+    # Async function to generate responses
+    async def generate_response(row):
+        formatted_prompt = USER_PROMPT_TEMPLATE.format(Keyword=row['Keyword'], URL=row['URL'])
+        retry_count = 0
+        while retry_count < 5:
+            try:
+                response = await client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": formatted_prompt}
+                    ],
+                    model="gpt-4o-mini"
+                )
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                logging.error(f"Error generating response: {e}")
+                retry_count += 1
+                await asyncio.sleep(2 ** retry_count)
+        return "ERROR"
 
-        # Update the progress bar
-        progress_bar.progress((index + 1) / total_keywords)
+    # Async batch processing
+    async def process_batch(batch_data):
+        tasks = [generate_response(row) for row in batch_data]
+        return await asyncio.gather(*tasks)
 
-    # Convert the responses into a DataFrame
-    results_df = pd.DataFrame(all_responses, columns=['Keyword', 'Recommendations'])
+    # Process data asynchronously
+    async def process_data():
+        progress_bar = st.progress(0)
+        response_list = []
+        num_rows = len(df)
+        processed_rows = 0
 
-    # Convert DataFrame to CSV and create download button
-    csv = results_df.to_csv(index=False).encode('utf-8')
-    st.download_button("Download Content Briefs as CSV", csv, "content-briefs.csv", "text/csv")
+        while processed_rows < num_rows:
+            batch_data = []
+            batch_tokens = 0
+            batch_size = 10  # Adjust based on rate limits
+
+            for i in range(batch_size):
+                if processed_rows + i >= num_rows:
+                    break
+                row = df.iloc[processed_rows + i]
+                total_prompt_tokens = count_tokens(USER_PROMPT_TEMPLATE.format(Keyword=row['Keyword'], URL=row['URL']))
+                batch_tokens += total_prompt_tokens
+
+                if batch_tokens > TOKEN_LIMIT - SAFETY_MARGIN:
+                    break
+                batch_data.append(row)
+
+            if not batch_data:
+                break
+
+            responses = await process_batch(batch_data)
+            for row, response in zip(batch_data, responses):
+                response_list.append([row['Keyword'], row['URL'], response])
+
+            processed_rows += len(batch_data)
+            progress_bar.progress(processed_rows / num_rows)
+
+        return response_list
+
+    if st.button("Generate Content Briefs"):
+        results = asyncio.run(process_data())
+        results_df = pd.DataFrame(results, columns=['Keyword', 'URL', 'Content Brief'])
+        csv_data = results_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Content Briefs as CSV", csv_data, "content-briefs.csv", "text/csv")
