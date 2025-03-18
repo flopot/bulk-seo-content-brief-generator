@@ -37,7 +37,7 @@ if uploaded_file and api_key:
     def generate_seo_recommendations(keyword, url):
         response = client.chat.completions.create(
             messages=[
-                {"role": "system", "content": "Send your URL and the keyword you target with it. I will have a look at your page and at the top 10 results to generate the best possible content brief."},
+                {"role": "system", "content": "You will receive a URL and the keyword it targets. Hve a look at the page and at the top 10 SERP results to generate the best possible content brief. Don't say anything more than the content brief."},
                 {"role": "user", "content": f"""First, visit '{url}'. Then check the top 10 results that appear in the SERP for the keyword '{keyword}'. Finally, generate a comprehensive content brief respecting the following structure: URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc... using bullet points), Other comments (here you can add other relevant comments, don't use bullet points or any kind of listing). Here's an example of how it should look like in terms of format:
     URL: https://www.ahs.com/our-coverage/
     
