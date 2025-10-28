@@ -3,6 +3,7 @@ import pandas as pd
 from openai import OpenAI
 import time
 import concurrent.futures
+import json # Added for tool handling
 
 # Title and Setup
 st.title('Bulk SEO Content Brief Generator')
@@ -24,6 +25,28 @@ uploaded_file = st.file_uploader(
     type=['csv']
 )
 
+# --- MINIMAL CHANGE 1: Define the browsing tool ---
+# This tool definition is what allows the model to access the web.
+BROWSING_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "browsing",
+        "description": "A powerful tool for real-time web browsing and search. Use this to gather up-to-date information, analyze search engine results pages (SERPs) for a given keyword, or research the content of a specific URL. The tool returns a summary of the search results or the content of the browsed page.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query to execute (e.g., 'best home warranty coverage SERP analysis') or the URL to browse (e.g., 'https://www.example.com/')."
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+# -------------------------------------------------
+
+
 if uploaded_file and api_key:
     # Initialize OpenAI client
     client = OpenAI(api_key=api_key)
@@ -40,8 +63,10 @@ if uploaded_file and api_key:
         responses = []
         
         for keyword, url in batch:
+            # --- MINIMAL CHANGE 2: Update the system prompt to instruct SERP analysis ---
+            # The system prompt must tell the model to use the browsing tool and what to look for.
             messages = [
-                {"role": "system", "content": "You will receive a URL and the keyword it targets. Use these to generate the best possible content brief. Don't say anything more than the content brief."},
+                {"role": "system", "content": "You are an expert SEO Content Strategist. You will receive a URL and the keyword it targets. You MUST use the `browsing` tool to analyze the SERP for the keyword to gather up-to-date information and competitive insights. Use these insights to generate the best possible content brief. Don't say anything more than the content brief."},
                 {"role": "user", "content": f"""Here's the URL: '{url}' and the Keyword: '{keyword}'. Generate a comprehensive content brief respecting the following structure: 
                 
         URL, Primary Keyword, Secondary Keywords, Title, Meta Description, Headings structure (H1, H2, H3 etc...), Other comments.
@@ -71,9 +96,14 @@ if uploaded_file and api_key:
     
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages
+                    # --- MINIMAL CHANGE 3: Change model to one with browsing capability ---
+                    model="gpt-4o", # Changed from "gpt-4o-mini"
+                    messages=messages,
+                    # --- MINIMAL CHANGE 4: Pass the browsing tool to the API call ---
+                    tools=[BROWSING_TOOL] 
                 )
+                
+                # The model's response will contain the final content brief, even if it used the tool internally.
                 responses.append(response.choices[0].message.content.strip())
             except Exception as e:
                 responses.append(f"Error: {e}")
@@ -101,4 +131,3 @@ if uploaded_file and api_key:
     # Convert DataFrame to CSV and create download button
     csv = results_df.to_csv(index=False).encode('utf-8')
     st.download_button("Download Content Briefs as CSV", csv, "content-briefs.csv", "text/csv")
-
