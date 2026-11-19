@@ -1,0 +1,29 @@
+# gointrepid.com tokens (site/shared CSS, /tools/csv-file-merger/ page), as far as Streamlit's theme reaches.
+[client]
+toolbarMode = "minimal"
+showErrorDetails = "none"
+
+[server]
+# Serves static/logo-white.png for the top menu. Do not set port/address here: Streamlit Cloud runs its own server.
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#A2FF2C"
+backgroundColor = "#141313"
+secondaryBackgroundColor = "#1E1C1C"
+textColor = "#E8EAF0"
+borderColor = "#2A2828"
+linkColor = "#007FFF"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&display=swap"
+codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&display=swap"
+headingFontWeights = [800, 800, 700]
+baseRadius = "2px"
+buttonRadius = "2px"
+showWidgetBorder = true
+dataframeHeaderBackgroundColor = "#2A2828"
+dataframeBorderColor = "#2A2828"
