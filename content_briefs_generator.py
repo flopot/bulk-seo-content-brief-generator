@@ -30,6 +30,64 @@ DEFAULT_HEADERS = {
 }
 
 
+# ---- Intrepid look (gointrepid.com) -------------------------------------------------------------------------
+# Colours and fonts come from .streamlit/config.toml; this adds the logo, the link back to the tools page, the
+# title and the card around the tool. static/logo-white.png is served because enableStaticServing = true.
+st.set_page_config(page_title="AI Content Brief Generator | Intrepid Digital", layout="centered")
+st.html("""
+<style>
+/* Streamlit chrome: hide the top bar, its menu and the status widget. */
+header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stStatusWidget"] { display: none !important; }
+.block-container { padding-top: 0 !important; max-width: 900px !important; }
+
+/* Top row: the site logo at the size gointrepid.com uses (63px tall) and a link back to the tools page. */
+.id-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 0 0; }
+.id-top img { height: 63px; width: auto; display: block; }
+.id-back { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #a2ff2c !important; text-decoration: none !important; white-space: nowrap; }
+.id-back:hover { color: #95ff0e !important; }
+@media (max-width: 640px) { .id-top img { height: 48px; } }
+
+/* Hero */
+.id-hero { padding: 56px 0 36px; }
+.id-hero h1 { font-size: clamp(36px, 5.5vw, 64px) !important; line-height: 1.08 !important; letter-spacing: -.02em; padding: 0 0 18px !important; }
+.id-hero h1 { margin: 0 !important; }
+.id-hero p { margin: 4px 0 0 !important; font-size: 18px; line-height: 1.6; color: #bfbaba; max-width: 700px; }
+.id-hero p strong { color: #e8eaf0; }
+
+/* Tool card: the outer block gets the site's surface + volt edge. */
+.st-key-tool { background: #1e1c1c; border: 1px solid rgba(255,255,255,.08); border-left: 3px solid #a2ff2c; padding: 36px 36px 32px; }
+
+/* Uploader: dashed drop zone, centred. */
+[data-testid="stFileUploaderDropzone"] { border: 1.5px dashed rgba(255,255,255,.18) !important; background: rgba(255,255,255,.02) !important; padding: 32px 20px !important; }
+[data-testid="stFileUploaderDropzone"]:hover { border-color: #a2ff2c !important; background: rgba(162,255,44,.05) !important; }
+[data-testid="stWidgetLabel"] p { font-family: 'IBM Plex Mono', monospace; font-size: 11px !important; letter-spacing: .14em; text-transform: uppercase; color: #6b6666 !important; }
+
+/* Buttons: volt, dark ink, uppercase, as the site CTAs. */
+.stButton button, .stDownloadButton button, [data-testid="stFileUploaderDropzone"] button { border-radius: 2px !important; }
+.stButton button, .stDownloadButton button { background: #a2ff2c !important; border: 0 !important; padding: 14px 28px !important; }
+.stButton button:hover, .stDownloadButton button:hover { background: #95ff0e !important; }
+.stButton button p, .stDownloadButton button p { color: #0a0b0f !important; font-weight: 700 !important; font-size: 13px !important; letter-spacing: .04em; text-transform: uppercase; }
+
+/* Metrics as the stat tiles. */
+[data-testid="stMetric"] { background: #2a2828; padding: 14px 18px; }
+[data-testid="stMetricValue"] { font-family: Outfit, sans-serif; font-weight: 800; }
+[data-testid="stMetricLabel"] p { font-family: 'IBM Plex Mono', monospace; font-size: 11px !important; letter-spacing: .12em; text-transform: uppercase; color: #6b6666 !important; }
+</style>
+""")
+st.html("""
+<div class="id-top">
+  <a href="https://www.gointrepid.com/tools/" target="_blank" rel="noopener"><img src="app/static/logo-white.png" alt="Intrepid Digital"></a>
+  <a class="id-back" href="https://www.gointrepid.com/tools/" target="_blank" rel="noopener">&larr; All Tools</a>
+</div>
+<div class="id-hero">
+  <h1>AI Content Brief Generator</h1>
+  <p>Upload a CSV with <strong>Keyword</strong> and <strong>URL</strong> columns (optionally <strong>Guidelines</strong>) and get an SEO content brief for each page. Uses your own OpenAI API key.</p>
+</div>
+""")
+# --------------------------------------------------------------------------------------------------------------
+
+
 # ============================================================
 # HELPERS
 # ============================================================
@@ -227,98 +285,96 @@ def generate_batch(client: OpenAI, batch_rows: list[tuple[int, str, str, str | N
 # STREAMLIT APP UI
 # ============================================================
 
-st.title("Bulk SEO Content Brief Generator")
+with st.container(key="tool"):
+    api_key = st.text_input("Enter your OpenAI API key", type="password")
 
-api_key = st.text_input("Enter your OpenAI API key", type="password")
+    uploaded_file = st.file_uploader(
+        "CSV file",
+        type=["csv"]
+    )
 
-uploaded_file = st.file_uploader(
-    "Choose your CSV file. It must contain columns 'Keyword' and 'URL'. "
-    "Optional: 'Guidelines'.",
-    type=["csv"]
-)
+    st.caption(
+        "Scraping uses Playwright when available (better for JS sites), otherwise requests+BeautifulSoup for static HTML. "
+        "Results are cached for 1 hour."
+    )
 
-st.caption(
-    "Scraping uses Playwright when available (better for JS sites), otherwise requests+BeautifulSoup for static HTML. "
-    "Results are cached for 1 hour."
-)
+    if uploaded_file and api_key:
+        try:
+            client = OpenAI(api_key=api_key)
+        except Exception as e:
+            st.error(f"Could not initialize OpenAI client: {e}")
+            st.stop()
 
-if uploaded_file and api_key:
-    try:
-        client = OpenAI(api_key=api_key)
-    except Exception as e:
-        st.error(f"Could not initialize OpenAI client: {e}")
-        st.stop()
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            st.error(f"Could not read CSV: {e}")
+            st.stop()
 
-    try:
-        df = pd.read_csv(uploaded_file)
-    except Exception as e:
-        st.error(f"Could not read CSV: {e}")
-        st.stop()
+        # Validate required columns
+        required_cols = {"Keyword", "URL"}
+        if not required_cols.issubset(set(df.columns)):
+            st.error("CSV must contain columns: 'Keyword' and 'URL'.")
+            st.stop()
 
-    # Validate required columns
-    required_cols = {"Keyword", "URL"}
-    if not required_cols.issubset(set(df.columns)):
-        st.error("CSV must contain columns: 'Keyword' and 'URL'.")
-        st.stop()
+        # Normalize
+        df = df.dropna(subset=["Keyword", "URL"]).copy()
+        df["Keyword"] = df["Keyword"].astype(str).str.strip()
+        df["URL"] = df["URL"].astype(str).str.strip()
 
-    # Normalize
-    df = df.dropna(subset=["Keyword", "URL"]).copy()
-    df["Keyword"] = df["Keyword"].astype(str).str.strip()
-    df["URL"] = df["URL"].astype(str).str.strip()
+        has_guidelines_col = "Guidelines" in df.columns
+        if has_guidelines_col:
+            df["Guidelines"] = df["Guidelines"].astype(str).fillna("").str.strip()
+        else:
+            df["Guidelines"] = ""
 
-    has_guidelines_col = "Guidelines" in df.columns
-    if has_guidelines_col:
-        df["Guidelines"] = df["Guidelines"].astype(str).fillna("").str.strip()
-    else:
-        df["Guidelines"] = ""
+        total = len(df)
+        if total == 0:
+            st.error("No valid rows found (Keyword/URL).")
+            st.stop()
 
-    total = len(df)
-    if total == 0:
-        st.error("No valid rows found (Keyword/URL).")
-        st.stop()
+        # Prepare positional rows to preserve order
+        rows = []
+        for pos, row in enumerate(df.itertuples(index=False)):
+            kw = getattr(row, "Keyword")
+            url = getattr(row, "URL")
+            guidelines = getattr(row, "Guidelines", "") if has_guidelines_col else ""
+            guidelines = guidelines if str(guidelines).strip() else None
+            rows.append((pos, kw, url, guidelines))
 
-    # Prepare positional rows to preserve order
-    rows = []
-    for pos, row in enumerate(df.itertuples(index=False)):
-        kw = getattr(row, "Keyword")
-        url = getattr(row, "URL")
-        guidelines = getattr(row, "Guidelines", "") if has_guidelines_col else ""
-        guidelines = guidelines if str(guidelines).strip() else None
-        rows.append((pos, kw, url, guidelines))
+        # Batch
+        batches = [rows[i:i + BATCH_SIZE] for i in range(0, total, BATCH_SIZE)]
+        total_batches = len(batches)
 
-    # Batch
-    batches = [rows[i:i + BATCH_SIZE] for i in range(0, total, BATCH_SIZE)]
-    total_batches = len(batches)
+        progress_bar = st.progress(0)
+        status = st.empty()
 
-    progress_bar = st.progress(0)
-    status = st.empty()
+        results = [None] * total
+        completed_batches = 0
 
-    results = [None] * total
-    completed_batches = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = [executor.submit(generate_batch, client, batch) for batch in batches]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = [executor.submit(generate_batch, client, batch) for batch in batches]
+            for fut in concurrent.futures.as_completed(futures):
+                batch_results = fut.result()  # list of (pos, rec)
+                for pos, rec in batch_results:
+                    results[pos] = rec
 
-        for fut in concurrent.futures.as_completed(futures):
-            batch_results = fut.result()  # list of (pos, rec)
-            for pos, rec in batch_results:
-                results[pos] = rec
+                completed_batches += 1
+                progress_bar.progress(min(completed_batches / total_batches, 1.0))
+                status.write(
+                    f"Processed {completed_batches}/{total_batches} batches "
+                    f"({sum(r is not None for r in results)}/{total} rows)"
+                )
 
-            completed_batches += 1
-            progress_bar.progress(min(completed_batches / total_batches, 1.0))
-            status.write(
-                f"Processed {completed_batches}/{total_batches} batches "
-                f"({sum(r is not None for r in results)}/{total} rows)"
-            )
+        out_df = pd.DataFrame({
+            "Keyword": df["Keyword"].tolist(),
+            "URL": df["URL"].tolist(),
+            # Only include Guidelines in output if it was present in input
+            **({"Guidelines": df["Guidelines"].tolist()} if has_guidelines_col else {}),
+            "Recommendations": results,
+        })
 
-    out_df = pd.DataFrame({
-        "Keyword": df["Keyword"].tolist(),
-        "URL": df["URL"].tolist(),
-        # Only include Guidelines in output if it was present in input
-        **({"Guidelines": df["Guidelines"].tolist()} if has_guidelines_col else {}),
-        "Recommendations": results,
-    })
-
-    csv_bytes = out_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download Content Briefs as CSV", csv_bytes, "content-briefs.csv", "text/csv")
-    st.dataframe(out_df, use_container_width=True)
+        csv_bytes = out_df.to_csv(index=False).encode("utf-8")
+        st.download_button("Download Content Briefs as CSV", csv_bytes, "content-briefs.csv", "text/csv")
+        st.dataframe(out_df, use_container_width=True)
